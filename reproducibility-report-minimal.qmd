@@ -1,10 +1,10 @@
 ---
 title: "Reproducibility Report: Maglio & Polman (2014), Study 1"
 subtitle: "Minimal version"
-author: "Your name here"
+author: "Urvi Suwal"
 date: today
 format:
-  html:
+  pdf:
     toc: true
     toc-location: left
     embed-resources: true
@@ -108,7 +108,10 @@ Use `mutate()` and `factor()` to convert both columns. For `STN_NAME`, give
 `factor()` a `levels` argument listing the stations from west to east.
 
 ```{r}
-
+d <-d |> mutate(
+    DIRECTION = factor(DIRECTION), 
+    STN_NAME = factor(STN_NAME, levels = c("SPAD", "STG", "B-Y", "SHER")) # order from the results section
+  )
 ```
 
 ## Step 4: Reproduce the analysis
@@ -116,10 +119,10 @@ Use `mutate()` and `factor()` to convert both columns. For `STN_NAME`, give
 ### How many people are in each cell?
 
 Count the participants in each direction × station combination. Does it match
-the paper (202 total, 101 per platform)? Is every cell the same size?
+the paper (202 total, 101 per platform)? Is every cell the same size? 
 
 ```{r}
-
+d |> count(DIRECTION, STN_NAME)
 ```
 
 ### The 2 × 4 ANOVA
@@ -128,6 +131,10 @@ Fit a two-way ANOVA with `aov()`: distance predicted by direction, station, and
 their interaction. Remember that `y ~ A * B` is shorthand for `y ~ A + B + A:B`.
 
 ```{r}
+anova_model <- aov(DISTANCE ~ DIRECTION *STN_NAME, data = d)
+
+# anova_model
+summary(anova_model)
 
 ```
 
@@ -156,10 +163,19 @@ Compute it for each effect. Hint: `tidy()` from broom turns the ANOVA table into
 a tibble, with the sums of squares in a column called `sumsq`.
 
 ```{r}
+anova_tib <- tidy(anova_model)
 
+sumsq_residuals <- anova_tib |> 
+  filter(term == 'Residuals') |>
+  pull(sumsq)
+
+anova_tib |>
+  filter(term != 'Residuals') |>
+  mutate(partial_eta_sq = sumsq/(sumsq+sumsq_residuals))
 ```
 
 Do your values round to the paper's .27 (station) and .20 (interaction)?
+Yes!
 
 ### Station-by-station comparisons
 
@@ -172,12 +188,56 @@ direction, run a one-way ANOVA of distance on direction, and compute ηp².
 ```{r}
 #| label: st-george
 
+# station rows 
+STG_d<- d |> filter(STN_NAME == "STG")
+
+# mean ratings
+STG_d |>
+  group_by(DIRECTION) |>
+  summarize(mean = mean(DISTANCE), n = n())
+
+# one way anova 
+STG_anova_model <- aov(DISTANCE ~ DIRECTION, data=STG_d)
+
+# ηp²
+STG_anova_tib <- tidy(STG_anova_model)
+
+sumsq_residuals <- STG_anova_tib |> 
+  filter(term == 'Residuals') |>
+  pull(sumsq)
+
+STG_anova_tib <- STG_anova_tib |>
+  filter(term != 'Residuals') |>
+  mutate(partial_eta_sq = sumsq/(sumsq+sumsq_residuals))
+
 ```
 
 #### Spadina
 
 ```{r}
 #| label: spadina
+
+# station rows 
+SPAD_d<- d |> filter(STN_NAME == "SPAD")
+
+# mean ratings
+SPAD_d |>
+  group_by(DIRECTION) |>
+  summarize(mean = mean(DISTANCE), n = n())
+
+# one way anova 
+SPAD_anova_model <- aov(DISTANCE ~ DIRECTION, data=SPAD_d)
+
+# ηp²
+SPAD_anova_tib <- tidy(SPAD_anova_model)
+
+sumsq_residuals <- SPAD_anova_tib |> 
+  filter(term == 'Residuals') |>
+  pull(sumsq)
+
+SPAD_anova_tib <- SPAD_anova_tib |>
+  filter(term != 'Residuals') |>
+  mutate(partial_eta_sq = sumsq/(sumsq+sumsq_residuals))
 
 ```
 
@@ -186,6 +246,29 @@ direction, run a one-way ANOVA of distance on direction, and compute ηp².
 ```{r}
 #| label: bloor-yonge
 
+
+# station rows 
+BY_d<- d |> filter(STN_NAME == "B-Y")
+
+# mean ratings
+BY_d |>
+  group_by(DIRECTION) |>
+  summarize(mean = mean(DISTANCE), n = n())
+
+# one way anova 
+BY_anova_model <- aov(DISTANCE ~ DIRECTION, data=BY_d)
+
+# ηp²
+BY_anova_tib <- tidy(BY_anova_model)
+
+sumsq_residuals <- BY_anova_tib |> 
+  filter(term == 'Residuals') |>
+  pull(sumsq)
+
+BY_anova_tib <- BY_anova_tib |>
+  filter(term != 'Residuals') |>
+  mutate(partial_eta_sq = sumsq/(sumsq+sumsq_residuals))
+
 ```
 
 #### Sherbourne
@@ -193,32 +276,57 @@ direction, run a one-way ANOVA of distance on direction, and compute ηp².
 ```{r}
 #| label: sherbourne
 
+
+# station rows 
+SHER_d<- d |> filter(STN_NAME == "SHER")
+
+# mean ratings
+SHER_d |>
+  group_by(DIRECTION) |>
+  summarize(mean = mean(DISTANCE), n = n())
+
+# one way anova 
+SHER_anova_model <- aov(DISTANCE ~ DIRECTION, data=SHER_d)
+
+# ηp²
+SHER_anova_tib <- tidy(SHER_anova_model)
+
+sumsq_residuals <- SHER_anova_tib |> 
+  filter(term == 'Residuals') |>
+  pull(sumsq)
+
+SHER_anova_tib <- SHER_anova_tib <- SHER_anova_tib |>
+  filter(term != 'Residuals') |>
+  mutate(partial_eta_sq = sumsq/(sumsq+sumsq_residuals))
+
 ```
 
 Fill in this table as you go:
 
 | Station | Paper *p* | Your *p* | Paper ηp² | Your ηp² |
 |---|---|---|---|---|
-| St. George | < .001 | | .28 | |
-| Spadina | .001 | | .20 | |
-| Bloor-Yonge | .053 | | .08 | |
-| Sherbourne | < .001 | | .24 | |
+| St. George | < .001 | < 0.001 | .28 | `r round(STG_anova_tib$partial_eta_sq, 2)` |
+| Spadina | .001 | 0.001 | .20 | `r round(SPAD_anova_tib$partial_eta_sq, 2)` |
+| Bloor-Yonge | .053 | 0.053 | .08 | `r round(BY_anova_tib$partial_eta_sq, 2)` |
+| Sherbourne | < .001 | < 0.001 | .24 | `r round(SHER_anova_tib$partial_eta_sq, 2)` |
 
 ## Step 5: Reflection
 
 Were you able to reproduce the results you attempted to reproduce? If not, which
 parts could you not reproduce?
 
-> ANSWER HERE
+> In the paper F(3,194) = 24.10 and the one we got was 23.35. 
 
 How difficult was it to reproduce the results?
 
-> ANSWER HERE
+> I think it was pretty straightforward and easy to reproduce the results.
 
 What made it hard, and what made it easy? Think about the data files, the
 variable names, and how much the paper told you about the analysis.
 
-> ANSWER HERE
+> Variable names were straightforward, readable and analysis described in the 
+results were clear. 
+
 
 ## Bonus questions
 
@@ -231,8 +339,10 @@ counts. What does that suggest about how the authors' software (SPSS) and R's
 first.
 
 ```{r}
-
+anova_model_2 <- aov(DISTANCE ~ STN_NAME * DIRECTION, data=d)
+summary(anova_model_2)
 ```
+> Changing the order of predictors changes the values, but not for the interaction. 
 
 **2. Orientation or direction?** The paper describes the factor as
 "orientation: toward, away from". The dataset has `DIRECTION`: east or west.
@@ -240,7 +350,25 @@ Are those the same variable? If not, which one did the authors actually put in
 their ANOVA? Make an `orientation` column with `if_else()` and refit the model
 with it to check.
 
+> not sure if this is what i was supposed to do but this was my understandin of toward 
+and away from the paper's methods+results. 
+
 ```{r}
+new_d <- d |>
+  mutate(
+    ORIENTATION = case_when(
+      DIRECTION == "WEST" & (STN_NAME == "SHER" | STN_NAME == "B-Y")  ~ "toward", 
+      DIRECTION == "EAST" & (STN_NAME == "SPAD" | STN_NAME == "B-Y") ~ "toward", 
+      DIRECTION == "EAST" & (STN_NAME == "B-Y"  | STN_NAME == "SHER") ~ "away", 
+      DIRECTION == "WEST" & (STN_NAME == "STG"  | STN_NAME == "SPAD") ~ "away", 
+    )
+  )
+
+
+orientation_model <- aov(DISTANCE ~ ORIENTATION *STN_NAME, data = new_d)
+
+# anova_model
+summary(orientation_model)
 
 ```
 
@@ -250,7 +378,6 @@ split by direction, with error bars of ±1 standard error, as in the paper.
 for you.
 
 ```{r}
-
 ```
 
 ## Going further
